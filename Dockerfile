@@ -1,4 +1,4 @@
-FROM python:2.7-slim
+FROM pypy:2-2.6
 
 RUN groupadd user && useradd --shell /bin/bash --create-home --home-dir /home/user -g user user
 WORKDIR /home/user
