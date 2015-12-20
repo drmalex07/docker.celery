@@ -13,6 +13,7 @@ ENV BROKER_URL "amqp://guest@rabbit"
 ENV CELERY_RESULT_BACKEND "rpc://"
 ENV CELERY_RESULT_PERSISTENT 0
 ENV CELERY_IMPORTS "helloworld"
+ENV CELERYD_CONCURRENCY 4
 
 COPY celeryconfig.py celeryconfig.py
 

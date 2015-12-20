@@ -11,3 +11,5 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json', 'yaml']
 
 CELERY_IMPORTS = os.environ.get('CELERY_IMPORTS').split(';')
+
+CELERYD_CONCURRENCY = os.environ.get('CELERYD_CONCURRENCY', 4)
