@@ -1,7 +1,7 @@
 FROM python:2.7-slim
 
-RUN groupadd user && useradd --shell /bin/bash --create-home --home-dir /home/user -g user user
-WORKDIR /home/user
+RUN groupadd celery && useradd --shell /bin/bash --create-home --home-dir /home/celery -g celery celery
+WORKDIR /home/celery
 
 RUN pip install redis
 
@@ -21,7 +21,7 @@ COPY helloworld.py helloworld.py
 
 LABEL name="celery"
 
-USER user
+USER celery
 ENTRYPOINT ["celery", "worker"]
 CMD ["--loglevel", "INFO"]
 
