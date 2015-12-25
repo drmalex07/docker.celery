@@ -1,0 +1,35 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  
+  config.vm.define "redis" do |redis|
+    redis.vm.provider "docker" do |p|
+      p.image = "redis:3.0"
+      p.name = "celery-1-redis"
+      p.create_args = [
+        "--hostname=celery-1-redis.internal"
+      ]
+    end
+    redis.vm.network "forwarded_port", guest: 6379, host: 16379
+  end
+
+  config.vm.define "celery" do |celery|
+    celery.vm.provider "docker" do |p|
+      p.build_dir = "images/celery-w-foo-tasks/"
+      p.name = "celery-1"
+      p.env = {
+        "BROKER_URL" => "redis://redis/0",
+        "CELERY_RESULT_BACKEND" => "redis://redis/1",
+        "CELERYD_CONCURRENCY" => "4",
+        "CELERY_IMPORTS" => 'helloworld;foo.tasks'
+      }
+      p.link("celery-1-redis:redis")
+      p.create_args = [
+        "--hostname=celery-1.internal",
+      ]
+    end
+  end
+
+end
+
