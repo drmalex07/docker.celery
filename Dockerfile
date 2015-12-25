@@ -23,6 +23,6 @@ COPY helloworld.py helloworld.py
 LABEL name="celery"
 
 USER celery
-ENTRYPOINT ["celery", "worker"]
-CMD ["--loglevel", "INFO"]
+ENTRYPOINT ["celery"]
+CMD ["worker", "--loglevel", "INFO"]
 

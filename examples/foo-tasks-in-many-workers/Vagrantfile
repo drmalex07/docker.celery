@@ -1,0 +1,54 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  
+  # Prepare needed Docker images before creating any Celery containers
+
+  config.trigger.before :up, :vm => 'celery-1-n1' do
+    run "docker build -t local/celery:3.1-w-foo-tasks images/celery-w-foo-tasks/"
+  end
+
+  ## Note The following does not properly fire *after* destroy  
+  #config.trigger.after :destroy do
+  #  run "docker rmi local/celery:3.1-w-foo-tasks"
+  #end
+
+  # Create container for Redis
+  
+  config.vm.define "redis" do |redis|
+    redis.vm.provider "docker" do |p|
+      p.image = "redis:3.0"
+      p.name = "celery-1-redis"
+      p.create_args = [
+        "--hostname=celery-1-redis.internal"
+      ]
+    end
+    redis.vm.network "forwarded_port", guest: 6379, host: 16379
+  end
+
+  # Create N containers for Celery worker pools
+
+  (1..3).each do |i|
+    config.vm.define "celery-1-n#{i}" do |celery|
+      celery.vm.provider "docker" do |p|
+        p.image = "local/celery:3.1-w-foo-tasks"
+        p.name = "celery-1-n#{i}"
+        p.env = {
+          "BROKER_URL" => "redis://redis/0",
+          "CELERY_RESULT_BACKEND" => "redis://redis/1",
+          "CELERYD_CONCURRENCY" => "4",
+          "CELERY_IMPORTS" => 'helloworld;foo.tasks',
+          "CELERY_QUEUES" => 'foo',
+        }
+        p.link("celery-1-redis:redis")
+        p.create_args = [
+          "--hostname=celery-1-n#{i}.internal",
+        ]
+      end
+    end
+  end
+
+
+end
+
