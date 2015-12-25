@@ -22,7 +22,8 @@ Vagrant.configure(2) do |config|
         "BROKER_URL" => "redis://redis/0",
         "CELERY_RESULT_BACKEND" => "redis://redis/1",
         "CELERYD_CONCURRENCY" => "4",
-        "CELERY_IMPORTS" => 'helloworld;foo.tasks'
+        "CELERY_IMPORTS" => "helloworld;foo.tasks",
+        "CELERY_QUEUES" => "foo",
       }
       p.link("celery-1-redis:redis")
       p.create_args = [
