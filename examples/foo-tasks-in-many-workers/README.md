@@ -25,14 +25,18 @@ or attach to it:
 
 1. Inspect the status of workers. Create an one-off container from same image, and run commands (status, inspect etc.) inside:
 
-    docker run --rm -it \
-       -e BROKER_URL=redis://redis/0 -e CELERY_RESULT_BACKEND=redis://redis/1 --link celery-1-redis:redis \
-       local/celery:3.1 inspect registered
+```shell
+docker run --rm -it \
+    -e BROKER_URL=redis://redis/0 -e CELERY_RESULT_BACKEND=redis://redis/1 --link celery-1-redis:redis \
+    local/celery:3.1 inspect registered
+```
 
-2. Open a Celery shell and send a chord of tasks (maybe from inside an one-off container). These tasks should be distributed (in a roughly equal manner) to all workers.
-For example, let's calculate the sum `1 * 2 + 2 * 3 + ... + i * (i+1) + ...`:
+2. Open a Celery shell and send a chord of tasks (maybe from inside an one-off container). These tasks should be distributed (in a roughly equal manner) to all workers. For example, let's calculate the sum:
+
+`1 * 2 + 2 * 3 + ... + i * (i+1) + ...`:
 
 ```python
+#!/usr/bin/python
 N = 15
 add_tasks = (subtask('foo.tasks.add', args=(i,j)) for (i,j) in zip(range(N), range(1, N+1)))
 t = chord(add_tasks, subtask('foo.tasks.addi'))
