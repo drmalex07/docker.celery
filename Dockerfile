@@ -14,6 +14,7 @@ ENV CELERY_RESULT_BACKEND "rpc://"
 ENV CELERY_RESULT_PERSISTENT 0
 ENV CELERY_IMPORTS "helloworld"
 ENV CELERYD_CONCURRENCY 4
+ENV CELERY_QUEUES "celery"
 
 COPY celeryconfig.py celeryconfig.py
 
@@ -22,6 +23,6 @@ COPY helloworld.py helloworld.py
 LABEL name="celery"
 
 USER celery
-ENTRYPOINT ["celery", "worker"]
-CMD ["--loglevel", "INFO"]
+ENTRYPOINT ["celery"]
+CMD ["worker", "--loglevel", "INFO"]
 
