@@ -1,12 +1,10 @@
 FROM local/celery:3.1
 
-WORKDIR /home/user
-
 # Install a foo Python package that defines tasks inside foo.tasks module
-ADD foo ./foo
+ADD foo /opt/foo
 
 USER root
-RUN cd foo && python setup.py install
+RUN cd /opt/foo && python setup.py install
 
-USER user
+USER celery
 ENV CELERY_IMPORTS "foo.tasks"

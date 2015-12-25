@@ -6,6 +6,12 @@ import time
 
 log1 = get_task_logger(__name__)
 
+class FooError(Exception): pass
+
+@task
+def fail():
+    raise FooError('Something is wrong')
+
 @task
 def add(x, y):
     log1.info ('Adding %.2f and %.2f' %(x,y))
