@@ -16,18 +16,19 @@ Vagrant.configure(2) do |config|
 
   config.vm.define "celery" do |celery|
     celery.vm.provider "docker" do |p|
-      p.build_dir = "images/celery-w-foo-tasks/"
-      p.name = "celery-1"
+      p.build_dir = "images/foo-worker"
+      p.name = "celery-1-worker"
       p.env = {
         "BROKER_URL" => "redis://redis/0",
         "CELERY_RESULT_BACKEND" => "redis://redis/1",
         "CELERYD_CONCURRENCY" => "4",
         "CELERY_IMPORTS" => "helloworld;foo.tasks",
-        "CELERY_QUEUES" => "foo",
+        "CELERY_QUEUES" => "foo-tasks;default",
+        "CELERY_DEFAULT_QUEUE" => 'default',
       }
       p.link("celery-1-redis:redis")
       p.create_args = [
-        "--hostname=celery-1.internal",
+        "--hostname=celery-1-worker.internal",
       ]
     end
   end

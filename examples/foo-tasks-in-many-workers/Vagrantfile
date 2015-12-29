@@ -3,19 +3,28 @@
 
 Vagrant.configure(2) do |config|
   
-  # Prepare needed Docker images before creating any Celery containers
+  ##
+  ## Prepare needed Docker images
+  ##
 
-  config.trigger.before :up, :vm => 'celery-1-n1' do
-    run "docker build -t local/celery:3.1-w-foo-tasks images/celery-w-foo-tasks/"
+  config.trigger.before :up, :vm => 'worker-1' do
+    run "docker build -t local/celery:3.1-foo-worker images/foo-worker"
+  end
+  
+  config.trigger.before :up, :vm => 'producer-1' do
+    run "docker build -t local/celery:3.1-foo-producer images/foo-producer"
+  end
+  
+  config.trigger.before :up, :vm => 'flower' do
+    run "docker build -t local/celery:3.1-flower images/flower"
   end
 
-  ## Note The following does not properly fire *after* destroy  
-  #config.trigger.after :destroy do
-  #  run "docker rmi local/celery:3.1-w-foo-tasks"
-  #end
+  ##
+  ## Create container for Redis
+  ##
 
-  # Create container for Redis
-  
+  redis_port = 16379
+
   config.vm.define "redis" do |redis|
     redis.vm.provider "docker" do |p|
       p.image = "redis:3.0"
@@ -24,31 +33,96 @@ Vagrant.configure(2) do |config|
         "--hostname=celery-1-redis.internal"
       ]
     end
-    redis.vm.network "forwarded_port", guest: 6379, host: 16379
+    redis.vm.network "forwarded_port", guest: 6379, host: redis_port
   end
 
-  # Create N containers for Celery worker pools
+  ##
+  ## Create N containers for Celery worker pools
+  ##
 
-  (1..3).each do |i|
-    config.vm.define "celery-1-n#{i}" do |celery|
+  num_workers = 2
+
+  # Base environment for workers
+  worker_base_env = {
+    "BROKER_URL" => "redis://redis/0",
+    "CELERY_RESULT_BACKEND" => "redis://redis/1",
+    "CELERYD_CONCURRENCY" => "4", # pool size
+    "CELERY_IMPORTS" => 'helloworld;foo.tasks',
+    "CELERY_QUEUES" => 'default;foo-tasks',
+    "CELERY_DEFAULT_QUEUE" => 'default',
+  }
+  
+  # Assign workers to queues (overrides base environment)
+  worker_queue_map = {
+    1 => 'default;foo-tasks',
+    2 => 'foo-tasks',
+  } 
+  
+  # Create containers
+  (1..num_workers).each do |i|
+    worker_env = worker_base_env.merge({'WORKER_NUMBER' => i})
+    if worker_queue_map.has_key?(i) then
+        worker_env['CELERY_QUEUES'] = worker_queue_map[i]
+    end
+    config.vm.define "worker-#{i}" do |celery|
       celery.vm.provider "docker" do |p|
-        p.image = "local/celery:3.1-w-foo-tasks"
-        p.name = "celery-1-n#{i}"
-        p.env = {
-          "BROKER_URL" => "redis://redis/0",
-          "CELERY_RESULT_BACKEND" => "redis://redis/1",
-          "CELERYD_CONCURRENCY" => "4",
-          "CELERY_IMPORTS" => 'helloworld;foo.tasks',
-          "CELERY_QUEUES" => 'foo',
-        }
+        p.image = "local/celery:3.1-foo-worker"
+        p.name = "celery-1-worker-#{i}"
+        p.env = worker_env
         p.link("celery-1-redis:redis")
         p.create_args = [
-          "--hostname=celery-1-n#{i}.internal",
+          "--hostname=celery-1-worker-#{i}.internal",
         ]
       end
     end
   end
 
+  ##
+  ## Create container for a task producer
+  ##
+
+  config.vm.define "producer-1" do |celery|
+    celery.vm.provider "docker" do |p|
+      p.image = 'local/celery:3.1-foo-producer'
+      p.name = 'celery-1-producer-1'
+      p.env = {
+        "BROKER_URL" => "redis://redis/0",
+        "CELERY_RESULT_BACKEND" => "redis://redis/1",
+        "CELERY_QUEUES" => 'default;foo-tasks',
+        "CELERY_DEFAULT_QUEUE" => 'default',
+      }     
+      p.link("celery-1-redis:redis")
+      p.remains_running = false
+      p.create_args = [
+        "--tty=true",
+        "--hostname=celery-1-producer-1.internal",
+      ]
+    end
+  end
+  
+  ##
+  ## Create container for monitoring ui (Celery Flower)
+  ##
+
+  flower_port = 15555
+
+  config.vm.define "flower" do |celery|
+    celery.vm.provider "docker" do |p|
+      p.image = 'local/celery:3.1-flower'
+      p.name = 'celery-1-flower'
+      p.env = {
+        "BROKER_URL" => "redis://redis/0",
+        "CELERY_RESULT_BACKEND" => "redis://redis/1",
+        "CELERY_QUEUES" => 'default;foo-tasks',
+        "CELERY_DEFAULT_QUEUE" => 'default',
+      }
+      p.link("celery-1-redis:redis")
+      p.create_args = [
+        "--hostname=celery-1-flower.internal",
+      ]
+    end
+    celery.vm.network "forwarded_port", guest: 5555, host: flower_port
+  end
 
 end
 
