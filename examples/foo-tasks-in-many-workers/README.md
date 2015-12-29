@@ -11,15 +11,22 @@ Create containers (the Docker image is built in advance):
 
     vagrant up --no-parallel --provider docker
 
-Send tasks to a `celery-1-n[123]` container.
+Send tasks to a `celery-1-worker-[12]` container.
 
 Print worker's log:
 
-    docker logs celery-1-n1
+    docker logs celery-1-worker-1
 
 or attach to it:
 
-    docker attach --sig-proxy=0 celery-1-n1
+    docker attach --sig-proxy=0 celery-1-worker-1
+
+Run a task *producer* container (will invoke (i.e. send) tasks) with some basic tests:
+
+   docker start -a celery-1-producer-1 
+
+Browse monitoring ui (via Celery Flower) at http://localhost:15555
+
 
 ## Examples
 
@@ -40,6 +47,6 @@ docker run --rm -it \
 N = 15
 add_tasks = (subtask('foo.tasks.add', args=(i,j)) for (i,j) in zip(range(N), range(1, N+1)))
 t = chord(add_tasks, subtask('foo.tasks.addi'))
-r = t.apply_async(queue='foo')
+r = t.apply_async(queue='foo-tasks')
 r.get()
 ```

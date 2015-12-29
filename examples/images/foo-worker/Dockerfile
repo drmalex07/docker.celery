@@ -1,6 +1,6 @@
 FROM local/celery:3.1
 
-# Install a foo Python package that defines tasks inside foo.tasks module
+# Install Python package that defines tasks inside foo.tasks module
 ADD foo /opt/foo
 
 USER root
